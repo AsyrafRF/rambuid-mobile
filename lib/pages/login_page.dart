@@ -152,24 +152,23 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _loginWithGoogle() async {
+    if (!await _checkInternetConnection()) {
+      _showError("Tidak ada koneksi internet.");
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
     try {
-      if (!await _checkInternetConnection()) {
-        _showError("Tidak ada koneksi internet.");
-        return;
-      }
+      final googleSignIn = GoogleSignIn.instance;
+      await googleSignIn.initialize();
+      final googleUser = await googleSignIn.authenticate();
 
-      setState(() => _isLoading = true);
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) {
-        setState(() => _isLoading = false);
-        return; // Cancelled
-      }
-
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
+      final clientAuth = await googleUser.authorizationClient
+          .authorizationForScopes(['email']);
       final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
+        accessToken: clientAuth?.accessToken,
+        idToken: clientAuth!.idToken,
       );
 
       final userCredential = await FirebaseAuth.instance.signInWithCredential(
@@ -177,22 +176,20 @@ class _LoginPageState extends State<LoginPage> {
       );
       await updateUIDToFirestore();
 
-      if (userCredential.user != null) {
-        if (userCredential.user!.emailVerified) {
-          if (!mounted) return;
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const BerandaPage(),
-              settings: RouteSettings(
-                arguments: {'successMessage': 'Login berhasil!'},
-              ),
+      if (userCredential.user != null && (userCredential.user!.emailVerified)) {
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const BerandaPage(),
+            settings: const RouteSettings(
+              arguments: {'successMessage': 'Login berhasil!'},
             ),
-          );
-        } else {
-          if (!mounted) return;
-          Navigator.pushReplacementNamed(context, '/verify-email');
-        }
+          ),
+        );
+      } else {
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/verify-email');
       }
     } catch (e) {
       _showError("Gagal login dengan Google: $e");
@@ -461,6 +458,9 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
+extension on GoogleSignInClientAuthorization {
+  Null get idToken => null;
+}
 
 Future<void> updateUIDToFirestore() async {
   final user = FirebaseAuth.instance.currentUser;
@@ -479,4 +479,3 @@ Future<void> updateUIDToFirestore() async {
         "active": true, // bisa digunakan untuk filter
       }, SetOptions(merge: true));
 }
-
