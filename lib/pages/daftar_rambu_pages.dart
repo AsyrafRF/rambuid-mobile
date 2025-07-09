@@ -1,19 +1,33 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class RambuListPage extends StatefulWidget {
-  const RambuListPage({super.key});
+  final String initialFilterJenis;
+  const RambuListPage({super.key, this.initialFilterJenis = 'Semua'});
 
   @override
   State<RambuListPage> createState() => _RambuListPageState();
 }
 
 class _RambuListPageState extends State<RambuListPage> {
-  String filterJenis = 'Semua';
-  final jenisList = ['Semua', 'Peringatan', 'Larangan', 'Petunjuk', 'Informasi'];
+  late String filterJenis;
+  final jenisList = [
+    'Semua',
+    'Peringatan',
+    'Larangan',
+    'Petunjuk',
+    'Informasi',
+  ];
   final TextEditingController _searchController = TextEditingController();
   String searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    filterJenis = widget.initialFilterJenis; // Gunakan dari parameter
+  }
 
   @override
   void dispose() {
@@ -52,12 +66,17 @@ class _RambuListPageState extends State<RambuListPage> {
                 return GestureDetector(
                   onTap: () => setState(() => filterJenis = jenis),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     child: Text(
                       jenis,
                       style: TextStyle(
                         color: selected ? Colors.orange : Colors.black,
-                        fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: selected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                     ),
                   ),
@@ -70,7 +89,8 @@ class _RambuListPageState extends State<RambuListPage> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: TextField(
               controller: _searchController,
-              onChanged: (value) => setState(() => searchQuery = value.toLowerCase()),
+              onChanged: (value) =>
+                  setState(() => searchQuery = value.toLowerCase()),
               decoration: InputDecoration(
                 hintText: 'Cari nama rambu',
                 prefixIcon: const Icon(Icons.search, color: Colors.orange),
@@ -88,7 +108,9 @@ class _RambuListPageState extends State<RambuListPage> {
             child: StreamBuilder<QuerySnapshot>(
               stream: stream,
               builder: (context, snapshot) {
-                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
                 final docs = snapshot.data!.docs.where((doc) {
                   final nama = doc['nama'].toString().toLowerCase();
@@ -116,7 +138,9 @@ class _RambuListPageState extends State<RambuListPage> {
                     return GestureDetector(
                       onTap: () => Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => RambuDetailPage(doc: doc)),
+                        MaterialPageRoute(
+                          builder: (_) => RambuDetailPage(doc: doc),
+                        ),
                       ),
                       child: Container(
                         decoration: BoxDecoration(
@@ -127,14 +151,15 @@ class _RambuListPageState extends State<RambuListPage> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Expanded(
-                              child: Image.memory(iconBytes),
-                            ),
+                            Expanded(child: Image.memory(iconBytes)),
                             const SizedBox(height: 8),
                             Text(
                               nama,
                               textAlign: TextAlign.center,
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ],
                         ),
@@ -161,28 +186,126 @@ class RambuDetailPage extends StatelessWidget {
     final jenis = doc['jenis'];
     final deskripsi = doc['deskripsi'];
     final iconBytes = base64Decode(doc['ikon_base64']);
+    final galeri =
+        ((doc.data() as Map<String, dynamic>)['galeri'] ?? []) as List<dynamic>;
+    final data = doc.data() as Map<String, dynamic>;
+    final List<dynamic> videoList = data['video_list'] ?? [];
+    final videoUrl = data['video_url'];
+    final String? videoId = videoUrl != null
+        ? YoutubePlayer.convertUrlToId(videoUrl)
+        : null;
+
+    YoutubePlayerController? youtubeController;
+    if (videoId != null) {
+      youtubeController = YoutubePlayerController(
+        initialVideoId: videoId,
+        flags: const YoutubePlayerFlags(autoPlay: false, mute: false),
+      );
+    }
+
+    final List<YoutubePlayerController> videoControllers = videoList
+        .map((url) {
+          final videoId = YoutubePlayer.convertUrlToId(url);
+          if (videoId != null) {
+            return YoutubePlayerController(
+              initialVideoId: videoId,
+              flags: const YoutubePlayerFlags(autoPlay: false, mute: false),
+            );
+          }
+          return null;
+        })
+        .whereType<YoutubePlayerController>()
+        .toList();
 
     return Scaffold(
-      appBar: AppBar(title: Text(nama)),
+      appBar: AppBar(
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(nama, style: const TextStyle(fontSize: 20)),
+        ),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Image.memory(iconBytes, height: 150),
-            ),
+            Center(child: Image.memory(iconBytes, height: 150)),
             const SizedBox(height: 20),
             Text("Jenis: $jenis", style: const TextStyle(fontSize: 16)),
             const SizedBox(height: 12),
-            const Text("Deskripsi:", style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              "Deskripsi:",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             Text(deskripsi),
+
+            if (youtubeController != null) ...[
+              const SizedBox(height: 24),
+              const Text(
+                'Video Penjelasan',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              YoutubePlayer(
+                controller: youtubeController,
+                showVideoProgressIndicator: true,
+                progressIndicatorColor: Colors.orange,
+              ),
+            ],
+
+            if (galeri.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              const Text(
+                'Galeri',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              Column(
+                children: galeri.map<Widget>((item) {
+                  final imgBytes = base64Decode(item['ikon_base64']);
+                  final caption = item['caption'];
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.memory(imgBytes),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        caption,
+                        style: const TextStyle(fontStyle: FontStyle.italic),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ],
+
+            if (videoControllers.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              const Text(
+                'Video Tambahan',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              Column(
+                children: videoControllers.map((controller) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: YoutubePlayer(
+                      controller: controller,
+                      showVideoProgressIndicator: true,
+                      progressIndicatorColor: Colors.orange,
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 }
-
-
-

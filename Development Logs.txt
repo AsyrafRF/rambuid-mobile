@@ -1,0 +1,12 @@
+Next Update:
+- Tambahkan loading indicator saat mengubah nickname atau matikan tombol sementara (Profil).
+
+Bug:
+    Emulator (Latest Android):
+- Belum Bisa Logout dari login online ketika offline (profil).
+
+    Android 13:
+
+    Android 8:
+
+Completed:

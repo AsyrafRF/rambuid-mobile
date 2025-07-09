@@ -1,11 +1,14 @@
 // ignore_for_file: library_private_types_in_public_api, unrelated_type_equality_checks
 
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../auth/account_storage.dart';
 import 'beranda_pages.dart';
 
 class LoginPage extends StatefulWidget {
@@ -30,6 +33,32 @@ class _LoginPageState extends State<LoginPage> {
   Future<bool> _checkInternetConnection() async {
     final connectivityResult = await Connectivity().checkConnectivity();
     return connectivityResult != ConnectivityResult.none;
+  }
+
+  final _secureStorage = FlutterSecureStorage();
+
+  Future<void> saveAccount(User user) async {
+    await _secureStorage.write(
+      key: user.uid,
+      value: jsonEncode({
+        "email": user.email,
+        "uid": user.uid,
+        // Jika ingin support login Google, simpan ID token (lihat catatan di bawah)
+      }),
+    );
+  }
+
+  Future<Map<String, dynamic>?> getSavedAccount(String uid) async {
+    final json = await _secureStorage.read(key: uid);
+    if (json != null) {
+      return jsonDecode(json);
+    }
+    return null;
+  }
+
+  Future<List> getAllSavedAccounts() async {
+    final all = await _secureStorage.readAll();
+    return all.values.map((v) => jsonDecode(v)).toList();
   }
 
   Future<void> _login() async {
@@ -74,6 +103,14 @@ class _LoginPageState extends State<LoginPage> {
         // Reset percobaan gagal
         _failedAttempts = 0;
         _lockoutEndTime = null;
+
+        // ✅ Simpan akun login ke secure storage
+        await AccountStorage.saveAccount(
+          uid: user.uid,
+          email: user.email!,
+          password:
+              password, // karena password = passwordController.text.trim()
+        );
 
         if (!mounted) return;
         Navigator.pushReplacement(
@@ -160,23 +197,37 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
-      final googleSignIn = GoogleSignIn.instance;
-      await googleSignIn.initialize();
-      final googleUser = await googleSignIn.authenticate();
+      // Inisialisasi GoogleSignIn
+      final GoogleSignIn googleSignIn = GoogleSignIn();
 
-      final clientAuth = await googleUser.authorizationClient
-          .authorizationForScopes(['email']);
+      // Tampilkan popup akun Google
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
+      if (googleUser == null) {
+        // User membatalkan login
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      // Ambil token autentikasi
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      // Konversi ke credential Firebase
       final credential = GoogleAuthProvider.credential(
-        accessToken: clientAuth?.accessToken,
-        idToken: clientAuth!.idToken,
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
       );
 
+      // Login ke Firebase Auth
       final userCredential = await FirebaseAuth.instance.signInWithCredential(
         credential,
       );
+
+      // Simpan UID ke Firestore (opsional, sudah ada di kode kamu)
       await updateUIDToFirestore();
 
-      if (userCredential.user != null && (userCredential.user!.emailVerified)) {
+      if (userCredential.user != null) {
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
@@ -187,9 +238,6 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
         );
-      } else {
-        if (!mounted) return;
-        Navigator.pushReplacementNamed(context, '/verify-email');
       }
     } catch (e) {
       _showError("Gagal login dengan Google: $e");
@@ -458,10 +506,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-extension on GoogleSignInClientAuthorization {
-  Null get idToken => null;
-}
-
 Future<void> updateUIDToFirestore() async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) return;
@@ -469,13 +513,32 @@ Future<void> updateUIDToFirestore() async {
   final uid = user.uid;
   final email = user.email ?? "";
 
-  await FirebaseFirestore.instance
-      .collection("active_user")
-      .doc(uid) // ✅ UID jadi ID dokumen
-      .set({
-        "uid": uid,
-        "email": email,
-        "lastLogin": FieldValue.serverTimestamp(),
-        "active": true, // bisa digunakan untuk filter
-      }, SetOptions(merge: true));
+  await FirebaseFirestore.instance.collection("active_user").doc(uid).set({
+    "uid": uid,
+    "email": email,
+    "lastLogin": FieldValue.serverTimestamp(),
+    "active": true,
+  }, SetOptions(merge: true));
+}
+
+final _secureStorage = FlutterSecureStorage();
+
+Future<void> saveAccount(User user) async {
+  await _secureStorage.write(
+    key: user.uid,
+    value: jsonEncode({"email": user.email, "uid": user.uid}),
+  );
+}
+
+Future<Map<String, dynamic>?> getSavedAccount(String uid) async {
+  final json = await _secureStorage.read(key: uid);
+  if (json != null) {
+    return jsonDecode(json);
+  }
+  return null;
+}
+
+Future<List> getAllSavedAccounts() async {
+  final all = await _secureStorage.readAll();
+  return all.values.map((v) => jsonDecode(v)).toList();
 }

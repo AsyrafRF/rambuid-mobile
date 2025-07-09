@@ -16,24 +16,40 @@ dependencies:
   mjpeg_view: ^1.0.1
   shared_preferences: ^2.5.3
   firebase_auth: ^5.6.0
-  google_sign_in: ^7.0.0
+  google_sign_in: ^6.3.0
   connectivity_plus: ^6.1.4
   shimmer: ^3.0.0
   http: ^1.4.0
   lottie: ^3.3.1
   intl: ^0.20.2
   font_awesome_flutter: ^10.8.0
-  google_sign_in_android: ^7.0.0
-
+  web_socket_channel: ^3.0.3
+  youtube_player_flutter: ^9.1.1
+  fl_chart: ^1.0.0
+  flutter_localizations:
+    sdk: flutter
+  flutter_secure_storage: ^9.2.4
+  fluttertoast: ^8.2.12
+  video_player: ^2.10.0
+  flutter_local_notifications: ^19.3.0
+  permission_handler: ^12.0.1
+  wifi_iot: ^0.3.19+2
+  wifi_scan: ^0.4.1+2
+  flutter_map: ^8.1.1
+  latlong2: ^0.9.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.6
 
 flutter:
   assets:
     - assets/images/
+    - assets/images/rambu_branding.png
+    - assets/images/verify-background.png
     - assets/icons/
     - assets/icons/ikon_webcam.png
     - assets/icons/google.png

@@ -23,9 +23,7 @@ class _RegisterPageState extends State<RegisterPage> {
     r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$',
   );
 
-  final RegExp _emailRegex = RegExp(
-    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-  );
+  final RegExp _emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
 
   Future<void> register() async {
     final email = emailController.text.trim();
@@ -48,26 +46,29 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     if (!_passwordRegex.hasMatch(password)) {
-      _showError("Password harus mengandung huruf kecil, huruf besar, angka, dan karakter spesial.");
+      _showError(
+        "Password harus mengandung huruf kecil, huruf besar, angka, dan karakter spesial.",
+      );
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      final userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
 
       await userCredential.user?.sendEmailVerification();
 
       // Simpan data user ke Firestore
-      await FirebaseFirestore.instance.collection('users').doc(userCredential.user?.uid).set({
-        'uid': userCredential.user?.uid,
-        'email': email,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user?.uid)
+          .set({
+            'uid': userCredential.user?.uid,
+            'email': email,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
 
       Navigator.pushReplacementNamed(context, '/verify-email');
     } on FirebaseAuthException catch (e) {
@@ -93,7 +94,7 @@ class _RegisterPageState extends State<RegisterPage> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text("OK"),
-          )
+          ),
         ],
       ),
     );
@@ -111,7 +112,11 @@ class _RegisterPageState extends State<RegisterPage> {
               child: Column(
                 children: [
                   const SizedBox(height: 40),
-                  Image.asset('assets/images/rambu_logo.png', width: 100, height: 100),
+                  Image.asset(
+                    'assets/images/rambu_logo.png',
+                    width: 100,
+                    height: 100,
+                  ),
                   const SizedBox(height: 8),
                   RichText(
                     text: TextSpan(
@@ -146,7 +151,11 @@ class _RegisterPageState extends State<RegisterPage> {
                   const SizedBox(height: 24),
                   _buildTextField(emailController, "email"),
                   const SizedBox(height: 16),
-                  _buildTextField(passwordController, "password", obscure: true),
+                  _buildTextField(
+                    passwordController,
+                    "password",
+                    obscure: true,
+                  ),
                   const SizedBox(height: 8),
                   const Align(
                     alignment: Alignment.centerLeft,
@@ -156,7 +165,11 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _buildTextField(confirmPasswordController, "konfirmasi password", obscure: true),
+                  _buildTextField(
+                    confirmPasswordController,
+                    "konfirmasi password",
+                    obscure: true,
+                  ),
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: register,
@@ -167,7 +180,10 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       minimumSize: const Size(double.infinity, 50),
                     ),
-                    child: const Text("Daftar", style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      "Daftar",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                   const SizedBox(height: 20),
                   Row(
@@ -175,7 +191,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     children: [
                       const Text("Sudah daftar? "),
                       GestureDetector(
-                        onTap: () => Navigator.pushReplacementNamed(context, '/login'),
+                        onTap: () =>
+                            Navigator.pushReplacementNamed(context, '/login'),
                         child: const Text(
                           "Silahkan masuk!",
                           style: TextStyle(
@@ -193,26 +210,28 @@ class _RegisterPageState extends State<RegisterPage> {
           if (_isLoading)
             Container(
               color: Colors.black.withOpacity(0.3),
-              child: const Center(
-                child: CircularProgressIndicator(),
-              ),
+              child: const Center(child: CircularProgressIndicator()),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String hint,
-      {bool obscure = false}) {
+  Widget _buildTextField(
+    TextEditingController controller,
+    String hint, {
+    bool obscure = false,
+  }) {
     return TextField(
       controller: controller,
       obscureText: obscure,
       decoration: InputDecoration(
         hintText: hint,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 16,
         ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
       ),
     );
   }

@@ -81,6 +81,21 @@ class _VerifyEmailPageState extends State<VerifyEmailPage>
   }
 
   Future<void> _sendVerificationEmail({bool forceTimer = true}) async {
+    final now = DateTime.now();
+
+    if (_lastSentTime != null &&
+      now.difference(_lastSentTime!) < _cooldownDuration) {
+    debugPrint("⏱️ Email verifikasi masih dalam cooldown.");
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Tunggu beberapa saat sebelum mengirim ulang email."),
+        backgroundColor: Colors.orange,
+      ),
+    );
+    return;
+  }
+
     try {
       User? user = FirebaseAuth.instance.currentUser;
 
@@ -102,6 +117,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage>
 
       if (!user.emailVerified) {
         await user.sendEmailVerification();
+        _lastSentTime = now; // ✅ Simpan waktu kirim terakhir
         debugPrint("✅ Email verifikasi dikirim");
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -135,7 +151,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Gagal mengirim email verifikasi: $e"),
+          content: Text("Gagal mengirim email verifikasi: terlalu banyak permintaan verifikasi email dalam waktu singkat"),
           backgroundColor: Colors.red,
         ),
       );
@@ -262,107 +278,126 @@ class _VerifyEmailPageState extends State<VerifyEmailPage>
         backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
       ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+      body: Stack(
+        children: [
+          // Gambar latar belakang
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/verify-background.png',
+              fit: BoxFit.cover,
             ),
-            elevation: 6,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24.0,
-                vertical: 32,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.email_rounded,
-                    size: 100,
-                    color: Colors.orange[800],
+          ),
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Card(
+                color: Colors.white.withValues(
+                  alpha: 0.8,
+                ), // untuk efek "overlay"
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                elevation: 6,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: 32,
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "Verifikasi Email Kamu",
-                    style: GoogleFonts.oswald(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    "Kami telah mengirim link verifikasi ke email kamu.\nSilakan cek dan klik link tersebut.",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 24),
-                  LinearProgressIndicator(
-                    value: _progressAnimation.value,
-                    minHeight: 6,
-                    color: Colors.orange,
-                    backgroundColor: Colors.orange.shade100,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: _isChecking ? null : _checkVerificationStatus,
-                    icon: const Icon(Icons.refresh),
-                    label: _isChecking
-                        ? Shimmer.fromColors(
-                            baseColor: Colors.white54,
-                            highlightColor: Colors.white,
-                            child: const Text(
-                              "Memeriksa...",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          )
-                        : const Text("Cek Status Verifikasi"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size.fromHeight(50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.email_rounded,
+                        size: 100,
+                        color: Colors.orange[800],
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _canResend
-                      ? TextButton(
-                          onPressed: () =>
-                              _sendVerificationEmail(forceTimer: true),
-                          child: const Text("Kirim Ulang Email Verifikasi"),
-                        )
-                      : Shimmer.fromColors(
-                          baseColor: Colors.orange.shade200,
-                          highlightColor: Colors.orange.shade100,
-                          child: Text(
-                            "Tunggu $_resendCountdown detik untuk kirim ulang.",
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
+                      const SizedBox(height: 16),
+                      Text(
+                        "Verifikasi Email Kamu",
+                        style: GoogleFonts.oswald(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        "Kami telah mengirim link verifikasi ke email kamu.\nSilakan cek dan klik link tersebut.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      const SizedBox(height: 24),
+                      LinearProgressIndicator(
+                        value: _progressAnimation.value,
+                        minHeight: 6,
+                        color: Colors.orange,
+                        backgroundColor: Colors.orange.shade100,
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        onPressed: _isChecking
+                            ? null
+                            : _checkVerificationStatus,
+                        icon: const Icon(Icons.refresh),
+                        label: _isChecking
+                            ? Shimmer.fromColors(
+                                baseColor: Colors.white54,
+                                highlightColor: Colors.white,
+                                child: const Text(
+                                  "Memeriksa...",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              )
+                            : const Text("Cek Status Verifikasi"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
                           ),
                         ),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: _logout,
-                    child: const Text(
-                      "Keluar",
-                      style: TextStyle(color: Colors.red),
-                    ),
+                      ),
+                      const SizedBox(height: 16),
+                      _canResend
+                          ? TextButton(
+                              onPressed: () =>
+                                  _sendVerificationEmail(forceTimer: true),
+                              child: const Text("Kirim Ulang Email Verifikasi"),
+                            )
+                          : Shimmer.fromColors(
+                              baseColor: Colors.orange.shade200,
+                              highlightColor: Colors.orange.shade100,
+                              child: Text(
+                                "Tunggu $_resendCountdown detik untuk kirim ulang.",
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: _logout,
+                        child: const Text(
+                          "Keluar",
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
+
+DateTime? _lastSentTime;
+final Duration _cooldownDuration = const Duration(seconds: 60);

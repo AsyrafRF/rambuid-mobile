@@ -1,0 +1,15 @@
+flutter clean   
+
+flutter pub get
+
+flutter pub outdated
+
+dart run flutter_native_splash:create
+
+dart run flutter_launcher_icons    
+
+flutter pub upgrade
+
+flutter run
+
+flutter build apk

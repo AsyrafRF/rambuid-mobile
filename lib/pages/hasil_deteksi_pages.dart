@@ -6,8 +6,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class HasilDeteksiPage extends StatefulWidget {
   final String imagePath;
+  final String? videoPath;
 
-  const HasilDeteksiPage({super.key, required this.imagePath});
+  const HasilDeteksiPage({super.key, required this.imagePath, this.videoPath});
 
   @override
   State<HasilDeteksiPage> createState() => _HasilDeteksiPageState();
@@ -39,7 +40,9 @@ class _HasilDeteksiPageState extends State<HasilDeteksiPage> {
 
     try {
       final request = http.MultipartRequest('POST', uri)
-        ..files.add(await http.MultipartFile.fromPath('image', widget.imagePath));
+        ..files.add(
+          await http.MultipartFile.fromPath('image', widget.imagePath),
+        );
 
       final response = await request.send();
 
@@ -52,7 +55,8 @@ class _HasilDeteksiPageState extends State<HasilDeteksiPage> {
         });
       } else {
         setState(() {
-          hasilDeteksi = 'Gagal mendeteksi gambar (kode: ${response.statusCode})';
+          hasilDeteksi =
+              'Gagal mendeteksi gambar (kode: ${response.statusCode})';
           isLoading = false;
         });
       }
@@ -78,7 +82,10 @@ class _HasilDeteksiPageState extends State<HasilDeteksiPage> {
                   const SizedBox(height: 20),
                   Text(
                     'Hasil Deteksi: $hasilDeteksi',
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ],
