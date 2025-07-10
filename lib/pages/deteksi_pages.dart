@@ -12,7 +12,7 @@ import 'package:http/http.dart' as http;
 import 'package:mjpeg_view/mjpeg_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import '../screens/connecting_screen.dart';
+import '../screens/status_screen.dart';
 import 'hasil_deteksi_pages.dart';
 import 'pengaturan_page.dart';
 import 'package:video_player/video_player.dart'; // untuk validasi durasi video
@@ -563,7 +563,7 @@ class _DeteksiRambuPageState extends State<DeteksiRambuPage> {
   void _goToConnectingScreen() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => ConnectingScreen()),
+      MaterialPageRoute(builder: (context) => StatusScreen(ip: '',)),
     );
   }
 

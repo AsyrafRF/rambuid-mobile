@@ -287,7 +287,7 @@ class _LoginPageState extends State<LoginPage> {
         builder: (context) => const BerandaPage(),
         settings: RouteSettings(
           arguments: {
-            'successMessage': 'Login tamu tanpa autentikasi Firebase!',
+            'successMessage': 'Login tamu secara lokal!',
           },
         ),
       ),

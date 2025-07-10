@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/wifi_service.dart';
 import '../utils/notification_helper.dart';
 
@@ -33,7 +34,33 @@ class _ConnectingScreenState extends State<ConnectingScreen> {
       final currentIP = result['ip'];
       final connected = result['connected'] == true;
       final fallback = result['fallback'] == true;
-      final ssid = result['ssid'] ?? 'RPi';
+      final _ = result['ssid'] ?? 'RPi';
+
+      if (result['connected'] == true) {
+        final ip = result['ip'] ?? 'Tidak diketahui';
+
+        setState(() {
+          connectionMessage = '✅ Tersambung ke internet.\nAlamat IP RPi: $ip';
+        });
+      }
+
+      if (result['connected'] == true) {
+        final currentIP = result['ip'];
+
+        if (currentIP != null && currentIP != lastKnownIP) {
+          lastKnownIP = currentIP;
+
+          // ✅ Simpan IP baru
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('last_ip', currentIP);
+
+          // Update UI / notifikasi
+          showIPChangeNotification(currentIP);
+          setState(() {
+            connectionMessage = '✅ IP RPi berubah: $currentIP';
+          });
+        }
+      }
 
       if (connected) {
         // ✅ Cek jika IP berubah
@@ -60,15 +87,24 @@ class _ConnectingScreenState extends State<ConnectingScreen> {
       } else if (fallback) {
         _pollingTimer?.cancel();
 
+        final ssid = result['ssid'] ?? 'RPi';
+
         if (!hasNotifiedFallback) {
           hasNotifiedFallback = true;
           showFallbackNotification(ssid);
         }
 
         setState(() {
-          fallbackSSID = ssid;
+          fallbackSSID = result['ssid'];
           message =
-              '❌ Gagal menghubungkan. Hotspot "$ssid" telah aktif kembali.\nSilakan sambung ulang.\nMengalihkan dalam $countdown detik...';
+              '❌ Gagal menghubungkan. Hotspot "${fallbackSSID ?? 'RPi'}" telah aktif kembali.\nSilakan sambung ulang ke jaringan tersebut.';
+        });
+
+        // ⏳ Tunggu 5 detik lalu kembali ke halaman awal
+        Future.delayed(Duration(seconds: 5), () {
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/');
+          }
         });
 
         startCountdown();
@@ -121,7 +157,7 @@ class _ConnectingScreenState extends State<ConnectingScreen> {
                   },
                   child: Text('Ulangi'),
                 ),
-              ]
+              ],
             ],
           ),
         ),

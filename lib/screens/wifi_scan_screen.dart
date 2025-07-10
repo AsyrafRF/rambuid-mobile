@@ -1,4 +1,4 @@
-// ignore_for_file: library_private_types_in_public_api, use_build_context_synchronously
+// ignore_for_file: library_private_types_in_public_api
 
 import 'package:flutter/material.dart';
 import '../services/wifi_service.dart';
@@ -45,10 +45,20 @@ class _WifiScanScreenState extends State<WifiScanScreen> {
       result = '';
     });
 
+    final response = await wifiService.connect(selectedSSID!, password);
+    if (response) {
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/status');
+    } else {
+      setState(() => result = '❌ Gagal koneksi. Hotspot diaktifkan ulang.');
+      // Mungkin tambahkan countdown atau retry otomatis
+    }
+
     final success = await wifiService.connect(selectedSSID!, password);
 
     if (success) {
-      Navigator.pushReplacementNamed(context, '/connecting');
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/status');
     } else {
       setState(() {
         result = '❌ Gagal koneksi. Hotspot akan tetap aktif.';
@@ -88,10 +98,7 @@ class _WifiScanScreenState extends State<WifiScanScreen> {
             if (result.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 12),
-                child: Text(
-                  result,
-                  style: const TextStyle(color: Colors.red),
-                ),
+                child: Text(result, style: const TextStyle(color: Colors.red)),
               ),
           ],
         ),

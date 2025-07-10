@@ -1,6 +1,7 @@
 // ignore_for_file: library_private_types_in_public_api
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/wifi_service.dart';
 
 class StatusScreen extends StatefulWidget {
@@ -16,12 +17,21 @@ class _StatusScreenState extends State<StatusScreen> {
   String? ssid;
   String? lastKnownIP;
   bool connected = false;
+  
 
   @override
   void initState() {
     super.initState();
     _checkConnection();
+    _loadLastKnownIP();
   }
+
+  Future<void> _loadLastKnownIP() async {
+  final prefs = await SharedPreferences.getInstance();
+  setState(() {
+    lastKnownIP = prefs.getString('last_ip');
+  });
+}
 
   Future<void> _checkConnection() async {
     final ok = await wifiService.checkStatus();

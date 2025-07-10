@@ -68,7 +68,7 @@ RambuID menggunakan **machine learning** untuk terus berkembang dan mengenali ra
 ### 🔧 **Software**
 - `Flutter` – Antarmuka aplikasi mobile
 - `Python` – Backend AI & integrasi
-- `Flask` – API Web untuk AI
+- `FastAPI` – API Web untuk AI
 - `OpenCV` – Pengolahan citra
 - `YOLOv8 (Ultralytics)` – Model deteksi rambu
 - `gTTS` – Teks ke suara untuk penjelasan rambu

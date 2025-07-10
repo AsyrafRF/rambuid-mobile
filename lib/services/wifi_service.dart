@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class WifiService {
-  static const String baseUrl = 'http://192.168.4.1'; // Ganti jika Pi terhubung ke router
+  static const String baseUrl = 'http://10.42.0.1'; // Ganti jika Pi terhubung ke router
 
   Future<List<String>> scanWifi() async {
     final response = await http.get(Uri.parse('$baseUrl/wifi/scan'));
