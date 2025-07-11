@@ -48,8 +48,9 @@ class _SwitchAccountPageState extends State<SwitchAccountPage> {
         );
         await FirebaseAuth.instance.signInWithCredential(credential);
       } else if (account['customToken'] != null) {
-        await FirebaseAuth.instance
-            .signInWithCustomToken(account['customToken']);
+        await FirebaseAuth.instance.signInWithCustomToken(
+          account['customToken'],
+        );
       } else if (account['email'] != null && account['password'] != null) {
         await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: account['email'],
@@ -63,13 +64,16 @@ class _SwitchAccountPageState extends State<SwitchAccountPage> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => const BerandaPage(),
+          builder: (_) => BerandaPage(
+            currentThemeMode: ThemeMode.light,
+            onToggleTheme: (bool isDark) {},
+          ),
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Gagal login ulang: $e")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Gagal login ulang: $e")));
     }
   }
 
@@ -81,9 +85,7 @@ class _SwitchAccountPageState extends State<SwitchAccountPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Ganti Akun"),
-      ),
+      appBar: AppBar(title: const Text("Ganti Akun")),
       body: savedAccounts.isEmpty
           ? const Center(child: Text("Tidak ada akun tersimpan."))
           : ListView.builder(
@@ -91,13 +93,16 @@ class _SwitchAccountPageState extends State<SwitchAccountPage> {
               itemBuilder: (context, index) {
                 final acc = savedAccounts[index];
                 return ListTile(
-                  leading: const Icon(Icons.account_circle, color: Colors.orange),
+                  leading: const Icon(
+                    Icons.account_circle,
+                    color: Colors.orange,
+                  ),
                   title: Text(acc['email'] ?? 'Tanpa Email'),
                   subtitle: acc['idToken'] != null
                       ? const Text("Google Account")
                       : acc['customToken'] != null
-                          ? const Text("Custom Token")
-                          : const Text("Email & Password"),
+                      ? const Text("Custom Token")
+                      : const Text("Email & Password"),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete, color: Colors.red),
                     onPressed: () => _hapusAkun(acc['uid']),

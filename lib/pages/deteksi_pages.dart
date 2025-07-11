@@ -24,7 +24,14 @@ StreamSubscription? _wsSubscription;
 String? _detectedLabel;
 
 class DeteksiRambuPage extends StatefulWidget {
-  const DeteksiRambuPage({super.key});
+  final ThemeMode currentThemeMode;
+  final void Function(bool isDark) onToggleTheme;
+
+  const DeteksiRambuPage({
+    super.key,
+    required this.onToggleTheme,
+    required this.currentThemeMode,
+  });
 
   @override
   State<DeteksiRambuPage> createState() => _DeteksiRambuPageState();
@@ -92,6 +99,35 @@ class _DeteksiRambuPageState extends State<DeteksiRambuPage> {
     }
   }
 
+  Future<void> _sendUIDToServer(String ip) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final idToken = await user.getIdToken(); // 🔑 Ambil token Firebase
+      final url = Uri.parse('http://$ip:8080/deteksi');
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'id_token': idToken}),
+      );
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body['status'] == 'success') {
+          debugPrint('✅ UID berhasil dikirim ke server');
+        } else {
+          debugPrint('❌ UID tidak diterima: ${body['detail']}');
+        }
+      } else {
+        debugPrint('❌ Gagal mengirim UID: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error saat kirim UID: $e');
+    }
+  }
+
   Future<void> _checkIfLoggedIn() async {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -137,7 +173,7 @@ class _DeteksiRambuPageState extends State<DeteksiRambuPage> {
           final detections = parsed['detections'];
 
           if (detections != null && detections.isNotEmpty) {
-            final label = detections[0]['label'];
+            final label = detections.map((d) => d['label']).join(', ');
             final bytes = base64Decode(base64Image);
             setState(() {
               _detectedLabel = label;
@@ -248,11 +284,12 @@ class _DeteksiRambuPageState extends State<DeteksiRambuPage> {
 
       if (response.statusCode == 200) {
         setState(() {
-          _streamUrl = testUrl;
+          _streamUrl = 'http://$ip:8080/video_feed';
           _status = 'Terhubung ke $testUrl';
         });
         _saveIP(ip);
-        _connectWebSocket(ip); // 🔌 Tambahkan ini
+        _connectWebSocket(ip); // 🔌 WebSocket aktif
+        _sendUIDToServer(ip); // 🆕 Kirim UID setelah sukses koneksi
       } else {
         setState(() {
           _status = 'Gagal terhubung: kode ${response.statusCode}';
@@ -393,13 +430,10 @@ class _DeteksiRambuPageState extends State<DeteksiRambuPage> {
       );
 
       if (connected) {
+        await _saveWifiCredentials(ssid, null); // Open = tidak ada password
         _goToConnectingScreen();
       } else {
         _showWifiInfo("Gagal menyambung ke $ssid (Open).");
-      }
-      if (connected) {
-        await _saveWifiCredentials(ssid, null); // Open = tidak ada password
-        _goToConnectingScreen();
       }
     } catch (e) {
       _showWifiInfo("Kesalahan: $e");
@@ -417,13 +451,10 @@ class _DeteksiRambuPageState extends State<DeteksiRambuPage> {
       );
 
       if (connected) {
+        await _saveWifiCredentials(ssid, password); // Simpan
         _goToConnectingScreen();
       } else {
         _showWifiInfo("Gagal menyambung ke $ssid.");
-      }
-      if (connected) {
-        await _saveWifiCredentials(ssid, password); // Simpan
-        _goToConnectingScreen();
       }
     } catch (e) {
       _showWifiInfo("Terjadi kesalahan saat menyambung: $e");
@@ -563,12 +594,16 @@ class _DeteksiRambuPageState extends State<DeteksiRambuPage> {
   void _goToConnectingScreen() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => StatusScreen(ip: '',)),
+      MaterialPageRoute(builder: (context) => StatusScreen(ip: '')),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? Colors.grey[900] : Colors.white;
+    final textColor = isDark ? Colors.white : Colors.black87;
+
     if (_checkingLoginStatus) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -576,14 +611,11 @@ class _DeteksiRambuPageState extends State<DeteksiRambuPage> {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null || user.providerData.isEmpty) {
-      // Pengguna tidak valid atau anonymous
       return Scaffold(
         appBar: AppBar(
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              Navigator.pop(context); // Kembali ke halaman sebelumnya
-            },
+            onPressed: () => Navigator.pop(context),
           ),
           title: const Text("Akses Ditolak"),
         ),
@@ -598,6 +630,16 @@ class _DeteksiRambuPageState extends State<DeteksiRambuPage> {
         title: const Text('Deteksi Rambu'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: () {
+              _showInfoDialog(
+                context,
+                "Tentang Aplikasi",
+                "Aplikasi ini digunakan untuk mendeteksi rambu lalu lintas melalui Raspberry Pi.",
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
               Navigator.push(
@@ -606,110 +648,224 @@ class _DeteksiRambuPageState extends State<DeteksiRambuPage> {
               );
             },
           ),
+          Switch(
+            value: widget.currentThemeMode == ThemeMode.dark,
+            onChanged: widget.onToggleTheme,
+            activeColor: Colors.amber,
+            inactiveThumbColor: Colors.white,
+            inactiveTrackColor: Colors.grey,
+          ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _ipController,
-              decoration: const InputDecoration(
-                labelText: 'Masukkan IP Raspberry Pi',
-                hintText: 'Contoh: 192.168.1.10',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.url,
-              onChanged: (text) {
-                setState(() {
-                  _status = 'Belum terhubung';
-                  _streamUrl = null;
-                });
-              },
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Langkah 1: Koneksi IP Raspberry
+          Card(
+            color: cardColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
-            const SizedBox(height: 8),
-            ElevatedButton(
-              onPressed: _isChecking ? null : _checkConnection,
-              child: const Text('Cek Koneksi'),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _status,
-              style: TextStyle(
-                color: _status.startsWith('Terhubung')
-                    ? Colors.green
-                    : Colors.red,
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (_detectedLabel != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 12.0),
-                child: Text(
-                  'Deteksi: $_detectedLabel',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+            elevation: 4,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Langkah 1: Sambungkan IP Raspberry",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: textColor,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _ipController,
+                    decoration: const InputDecoration(
+                      labelText: 'Masukkan IP Raspberry Pi',
+                      hintText: 'Contoh: 192.168.1.10',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.device_hub),
+                    ),
+                    keyboardType: TextInputType.url,
+                    onChanged: (text) {
+                      setState(() {
+                        _status = 'Belum terhubung';
+                        _streamUrl = null;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.wifi_tethering),
+                    onPressed: _isChecking ? null : _checkConnection,
+                    label: const Text('Cek Koneksi'),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _status,
+                    style: TextStyle(
+                      color: _status.startsWith('Terhubung')
+                          ? Colors.green
+                          : Colors.red,
+                    ),
+                  ),
+                ],
               ),
-            if (_streamUrl != null)
-              SizedBox(
-                height: 300,
-                width: double.infinity,
-                child: MjpegView(
-                  uri: _streamUrl!,
-                  onError: (error, stack) {
-                    debugPrint("Stream error: $error");
-                    (
-                      child: Text(
-                        'Stream error.\nCoba cek koneksi atau restart Raspberry Pi.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.red),
+            ),
+          ),
+
+          // Langkah 2: Live Stream
+          AnimatedOpacity(
+            opacity: _streamUrl != null ? 1.0 : 0.5,
+            duration: const Duration(milliseconds: 300),
+            child: Card(
+              color: cardColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Langkah 2: Lihat Deteksi Langsung",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: textColor,
                       ),
-                    );
-                  },
+                    ),
+                    const SizedBox(height: 12),
+                    if (_streamUrl != null)
+                      SizedBox(
+                        height: 240,
+                        width: double.infinity,
+                        child: MjpegView(
+                          uri: _streamUrl!,
+                          onError: (error, stack) {
+                            debugPrint("Stream error: $error");
+                            _showSnackbarInfo(
+                              context,
+                              "Gagal stream. Pastikan Raspberry Pi berjalan dan IP benar.",
+                            );
+                            setState(() {
+                              _status =
+                                  "Stream error. Coba cek koneksi atau restart Raspberry Pi. ($error)";
+                            });
+                          },
+                        ),
+                      ),
+                    if (_detectedLabel != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          'Deteksi: $_detectedLabel',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    if (_decodedImageBytes != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Image.memory(_decodedImageBytes!, height: 160),
+                      ),
+                  ],
                 ),
               ),
-            if (_decodedImageBytes != null)
-              Image.memory(_decodedImageBytes!, height: 200),
-            const SizedBox(height: 16),
-            const Text(
-              "Deteksi melalui Gambar atau Video:",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            ElevatedButton(
-              onPressed: _pickImage,
-              child: const Text('Unggah Gambar'),
+          ),
+
+          // Langkah 3: Upload File
+          Card(
+            color: cardColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
-            const SizedBox(height: 8),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.video_file),
-              onPressed: _pickVideo,
-              label: const Text('Unggah Video (MP4)'),
+            elevation: 4,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Langkah 3: Unggah File Manual",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.image),
+                    onPressed: _pickImage,
+                    label: const Text('Unggah Gambar'),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.video_file),
+                    onPressed: _pickVideo,
+                    label: const Text('Unggah Video (MP4)'),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            const Text(
-              "Atau Sambungkan ke Hotspot Raspberry:",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+
+          // Langkah 4: Hotspot/WiFi
+          Card(
+            color: cardColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.wifi),
-              onPressed: _connectToHotspot,
-              label: const Text("Sambung ke Hotspot Raspberry"),
+            elevation: 4,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Langkah 4: Sambung ke Hotspot Raspberry",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.wifi),
+                    onPressed: _connectToHotspot,
+                    label: const Text("Sambung ke Hotspot Raspberry"),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.wifi_find),
+                    onPressed: _scanAndConnectToWifi,
+                    label: const Text("Pindai & Sambung ke Hotspot Raspberry"),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    onPressed: _clearSavedWifi,
+                    icon: const Icon(Icons.wifi_off),
+                    label: const Text("Lupakan Wi-Fi Tersimpan"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.wifi_find),
-              onPressed: _scanAndConnectToWifi,
-              label: const Text("Pindai & Sambung ke Hotspot Raspberry"),
-            ),
-            ElevatedButton.icon(
-              onPressed: _clearSavedWifi,
-              icon: const Icon(Icons.wifi_off),
-              label: const Text("Lupakan Wi-Fi Tersimpan"),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -752,4 +908,30 @@ class _DeteksiRambuPageState extends State<DeteksiRambuPage> {
     _channel?.sink.close();
     super.dispose();
   }
+}
+
+void _showInfoDialog(BuildContext context, String title, String message) {
+  showDialog(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: Text(title),
+      content: Text(message),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("OK"),
+        ),
+      ],
+    ),
+  );
+}
+
+void _showSnackbarInfo(BuildContext context, String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(message),
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: Colors.red[400],
+    ),
+  );
 }

@@ -116,7 +116,10 @@ class _LoginPageState extends State<LoginPage> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => const BerandaPage(),
+            builder: (context) => BerandaPage(
+              currentThemeMode: ThemeMode.light,
+              onToggleTheme: (bool isDark) {},
+            ),
             settings: RouteSettings(
               arguments: {'successMessage': 'Login berhasil!'},
             ),
@@ -232,7 +235,10 @@ class _LoginPageState extends State<LoginPage> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => const BerandaPage(),
+            builder: (_) => BerandaPage(
+              currentThemeMode: ThemeMode.light,
+              onToggleTheme: (bool isDark) {},
+            ),
             settings: const RouteSettings(
               arguments: {'successMessage': 'Login berhasil!'},
             ),
@@ -262,7 +268,10 @@ class _LoginPageState extends State<LoginPage> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => const BerandaPage(),
+            builder: (context) => BerandaPage(
+              currentThemeMode: ThemeMode.light,
+              onToggleTheme: (bool isDark) {},
+            ),
             settings: RouteSettings(
               arguments: {'successMessage': 'Login sebagai tamu berhasil!'},
             ),
@@ -284,11 +293,12 @@ class _LoginPageState extends State<LoginPage> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => const BerandaPage(),
+        builder: (context) => BerandaPage(
+          currentThemeMode: ThemeMode.light,
+          onToggleTheme: (bool isDark) {},
+        ),
         settings: RouteSettings(
-          arguments: {
-            'successMessage': 'Login tamu secara lokal!',
-          },
+          arguments: {'successMessage': 'Login tamu secara lokal!'},
         ),
       ),
     );

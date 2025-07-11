@@ -18,7 +18,14 @@ import 'deteksi_pages.dart';
 import 'profil_page.dart';
 
 class BerandaPage extends StatefulWidget {
-  const BerandaPage({super.key});
+  final ThemeMode currentThemeMode;
+  final void Function(bool isDark) onToggleTheme;
+
+  const BerandaPage({
+    super.key,
+    required this.currentThemeMode,
+    required this.onToggleTheme,
+  });
 
   @override
   _BerandaPageState createState() => _BerandaPageState();
@@ -28,31 +35,28 @@ class _BerandaPageState extends State<BerandaPage> {
   int _currentIndex = 0;
   bool _isSnackbarShown = false; // Mencegah snackbar muncul berulang
 
+  void _navigateWithTheme(Widget page) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+  }
+
   void _onItemTapped(int index) {
     setState(() {
       _currentIndex = index;
     });
 
     if (index == 1) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const DeteksiRambuPage()),
+      _navigateWithTheme(
+        DeteksiRambuPage(
+          currentThemeMode: widget.currentThemeMode,
+          onToggleTheme: widget.onToggleTheme,
+        ),
       );
     } else if (index == 2) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const RambuListPage()),
-      );
+      _navigateWithTheme(const RambuListPage());
     } else if (index == 3) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const DetectionHistoryPage()),
-      );
+      _navigateWithTheme(const DetectionHistoryPage());
     } else if (index == 4) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const ProfilPage()),
-      );
+      _navigateWithTheme(const ProfilPage());
     }
   }
 
@@ -186,6 +190,8 @@ class _BerandaPageState extends State<BerandaPage> {
 
   @override
   Widget build(BuildContext context) {
+    final themeMode = widget.currentThemeMode;
+    final toggleTheme = widget.onToggleTheme;
     return Scaffold(
       backgroundColor: const Color(0xFFF9F9F9),
       body: SafeArea(
@@ -195,6 +201,7 @@ class _BerandaPageState extends State<BerandaPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildLogoWithButton(),
+
               const SizedBox(height: 32),
 
               // 📦 Menu Atas
@@ -206,12 +213,7 @@ class _BerandaPageState extends State<BerandaPage> {
                     label: 'Daftar Rambu',
                     color: const Color(0xFFFFF3DD),
                     onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const RambuListPage(),
-                        ),
-                      );
+                      _navigateWithTheme(const RambuListPage());
                     },
                   ),
                   _buildMainMenu(
@@ -219,12 +221,7 @@ class _BerandaPageState extends State<BerandaPage> {
                     label: 'Riwayat Rambu',
                     color: const Color(0xFFFFF3DD),
                     onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const DetectionHistoryPage(),
-                        ),
-                      );
+                      _navigateWithTheme(const DetectionHistoryPage());
                     },
                   ),
                 ],
@@ -345,6 +342,19 @@ class _BerandaPageState extends State<BerandaPage> {
               ),
               const SizedBox(height: 12),
               _buildDetectionChart(),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('🌞'),
+                  Switch(
+                    value: themeMode == ThemeMode.dark,
+                    onChanged: toggleTheme,
+                    activeColor: Colors.amber,
+                  ),
+                  const Text('🌙'),
+                ],
+              ),
             ],
           ),
         ),
@@ -442,10 +452,10 @@ class _BerandaPageState extends State<BerandaPage> {
           bottom: 0,
           child: GestureDetector(
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const DeteksiRambuPage(),
+              _navigateWithTheme(
+                DeteksiRambuPage(
+                  currentThemeMode: widget.currentThemeMode,
+                  onToggleTheme: widget.onToggleTheme,
                 ),
               );
             },

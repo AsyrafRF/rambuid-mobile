@@ -10,8 +10,9 @@ const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
   showWhen: false,
 );
 
-const NotificationDetails platformDetails =
-    NotificationDetails(android: androidDetails);
+const NotificationDetails platformDetails = NotificationDetails(
+  android: androidDetails,
+);
 
 /// Notifikasi saat fallback/hotspot aktif kembali
 Future<void> showFallbackNotification(String ssid) async {

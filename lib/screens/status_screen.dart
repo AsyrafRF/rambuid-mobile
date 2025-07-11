@@ -17,7 +17,6 @@ class _StatusScreenState extends State<StatusScreen> {
   String? ssid;
   String? lastKnownIP;
   bool connected = false;
-  
 
   @override
   void initState() {
@@ -27,11 +26,11 @@ class _StatusScreenState extends State<StatusScreen> {
   }
 
   Future<void> _loadLastKnownIP() async {
-  final prefs = await SharedPreferences.getInstance();
-  setState(() {
-    lastKnownIP = prefs.getString('last_ip');
-  });
-}
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      lastKnownIP = prefs.getString('last_ip');
+    });
+  }
 
   Future<void> _checkConnection() async {
     final ok = await wifiService.checkStatus();

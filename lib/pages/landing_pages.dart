@@ -4,7 +4,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class LandingPage extends StatefulWidget {
-  const LandingPage({super.key});
+  const LandingPage({
+    super.key,
+    required void Function(bool isDark) onToggleTheme,
+    required ThemeMode currentThemeMode,
+  });
 
   @override
   State<LandingPage> createState() => _LandingPageState();

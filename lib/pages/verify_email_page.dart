@@ -84,17 +84,17 @@ class _VerifyEmailPageState extends State<VerifyEmailPage>
     final now = DateTime.now();
 
     if (_lastSentTime != null &&
-      now.difference(_lastSentTime!) < _cooldownDuration) {
-    debugPrint("⏱️ Email verifikasi masih dalam cooldown.");
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Tunggu beberapa saat sebelum mengirim ulang email."),
-        backgroundColor: Colors.orange,
-      ),
-    );
-    return;
-  }
+        now.difference(_lastSentTime!) < _cooldownDuration) {
+      debugPrint("⏱️ Email verifikasi masih dalam cooldown.");
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Tunggu beberapa saat sebelum mengirim ulang email."),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
     try {
       User? user = FirebaseAuth.instance.currentUser;
@@ -151,7 +151,9 @@ class _VerifyEmailPageState extends State<VerifyEmailPage>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Gagal mengirim email verifikasi: terlalu banyak permintaan verifikasi email dalam waktu singkat"),
+          content: Text(
+            "Gagal mengirim email verifikasi: terlalu banyak permintaan verifikasi email dalam waktu singkat",
+          ),
           backgroundColor: Colors.red,
         ),
       );

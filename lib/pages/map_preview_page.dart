@@ -39,11 +39,7 @@ class MapPreviewPage extends StatelessWidget {
         );
       }
     } else {
-      markerWidget = const Icon(
-        Icons.location_on,
-        size: 40,
-        color: Colors.red,
-      );
+      markerWidget = const Icon(Icons.location_on, size: 40, color: Colors.red);
     }
 
     return Scaffold(

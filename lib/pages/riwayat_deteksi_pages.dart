@@ -537,7 +537,6 @@ class _DetectionHistoryPageState extends State<DetectionHistoryPage> {
                           ),
                         ),
                       );
-
                     },
                     child: Chip(
                       avatar: const Icon(
@@ -589,10 +588,19 @@ class _DetectionHistoryPageState extends State<DetectionHistoryPage> {
             if (base64Image != null && base64Image.isNotEmpty)
               GestureDetector(
                 onTap: () => showDetailRambuDialog(label),
-                child: Image.memory(
-                  base64Decode(base64Image),
-                  height: 200,
-                  fit: BoxFit.cover,
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.amber, width: 4),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: Image.memory(
+                      base64Decode(base64Image),
+                      height: 200,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
                 ),
               )
             else
@@ -656,14 +664,32 @@ class _DetectionHistoryPageState extends State<DetectionHistoryPage> {
     return SafeArea(
       child: Scaffold(
         backgroundColor: Colors.grey[50],
-        body: CustomScrollView(
-          controller: _scrollController,
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            _buildAppBar(),
-            _buildDateFilter(), // tambahkan ini
-            _buildPaginatedList(),
-          ],
+        body: Theme(
+          data: Theme.of(context).copyWith(
+            scrollbarTheme: ScrollbarThemeData(
+              thumbColor: WidgetStateProperty.all(Colors.amber),
+              trackColor: WidgetStateProperty.all(Colors.amber.shade100),
+              trackBorderColor: WidgetStateProperty.all(Colors.amber.shade200),
+            ),
+          ),
+          child: Scrollbar(
+            controller: _scrollController,
+            thumbVisibility: false,
+            trackVisibility: false,
+            thickness: 8.0,
+            radius: const Radius.circular(12),
+            scrollbarOrientation: ScrollbarOrientation.right,
+            interactive: true,
+            child: CustomScrollView(
+              controller: _scrollController,
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                _buildAppBar(),
+                _buildDateFilter(),
+                _buildPaginatedList(),
+              ],
+            ),
+          ),
         ),
       ),
     );

@@ -80,9 +80,9 @@ class _PengaturanPageState extends State<PengaturanPage> {
       _newIpController.clear();
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("IP berhasil dihapus")),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text("IP berhasil dihapus")));
   }
 
   @override
