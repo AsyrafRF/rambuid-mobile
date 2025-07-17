@@ -8,7 +8,7 @@ import 'package:latlong2/latlong.dart';
 class MapPreviewPage extends StatelessWidget {
   final double latitude;
   final double longitude;
-  final String? base64Icon; // Tambahan
+  final String? base64Icon;
 
   const MapPreviewPage({
     super.key,
@@ -30,8 +30,7 @@ class MapPreviewPage extends StatelessWidget {
           height: 40,
           fit: BoxFit.contain,
         );
-      } catch (e) {
-        // Jika decoding gagal, fallback ke ikon default
+      } catch (_) {
         markerWidget = const Icon(
           Icons.location_on,
           size: 40,
@@ -45,7 +44,6 @@ class MapPreviewPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Lokasi Deteksi')),
       body: FlutterMap(
-        mapController: MapController(),
         options: MapOptions(
           initialCenter: LatLng(latitude, longitude),
           initialZoom: 16,
@@ -53,15 +51,16 @@ class MapPreviewPage extends StatelessWidget {
         children: [
           TileLayer(
             urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            userAgentPackageName: 'com.example.app',
+            userAgentPackageName:
+                'com.example.rambuid', // ganti sesuai ID aplikasi
           ),
           MarkerLayer(
             markers: [
               Marker(
                 point: LatLng(latitude, longitude),
-                width: 50,
-                height: 50,
-                alignment: Alignment.topCenter,
+                width: 60,
+                height: 60,
+                alignment: Alignment.center,
                 child: markerWidget,
               ),
             ],
