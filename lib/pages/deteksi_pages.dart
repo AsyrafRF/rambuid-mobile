@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:mjpeg_view/mjpeg_view.dart';
+import 'package:rambu_idv2/utils/raspberry_connection.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../screens/status_screen.dart';
@@ -440,6 +441,38 @@ class _DeteksiRambuPageState extends State<DeteksiRambuPage> {
     }
   }
 
+  Future<void> _handleConnectToRaspberry() async {
+    final ip = _ipController.text.trim();
+
+    setState(() {
+      _status = "Menghubungkan...";
+      _isChecking = true;
+      _streamUrl = null;
+    });
+
+    await RaspberryConnector.connectToRaspberry(
+      ip: ip,
+      onStatus: (statusMsg) {
+        setState(() {
+          _status = statusMsg;
+          if (statusMsg.contains("✅")) {
+            _streamUrl = 'http://$ip:8080/video_feed';
+          }
+          _isChecking = false;
+        });
+      },
+      onImageAndLabel: (imageBytes, label) {
+        setState(() {
+          _decodedImageBytes = imageBytes;
+          _detectedLabel = label;
+        });
+      },
+      onError: (errMsg) {
+        _showSnackbarInfo(context, errMsg);
+      },
+    );
+  }
+
   Future<void> _connectToSelectedSSID(String ssid, String password) async {
     try {
       final connected = await WiFiForIoTPlugin.connect(
@@ -556,8 +589,8 @@ class _DeteksiRambuPageState extends State<DeteksiRambuPage> {
 
   Future<void> _connectToHotspot() async {
     const ssid =
-        "RaspberryPi_Hotspot"; // ganti dengan nama hotspot Raspberry-mu
-    const password = "raspberry123"; // ganti jika hotspot butuh password
+        "Pi-TRPL402"; // ganti dengan nama hotspot Raspberry-mu
+    const password = "pbltrpl402m"; // ganti jika hotspot butuh password
 
     try {
       // Pastikan Wi-Fi aktif
@@ -700,7 +733,7 @@ class _DeteksiRambuPageState extends State<DeteksiRambuPage> {
                   const SizedBox(height: 8),
                   ElevatedButton.icon(
                     icon: const Icon(Icons.wifi_tethering),
-                    onPressed: _isChecking ? null : _checkConnection,
+                    onPressed: _isChecking ? null : _handleConnectToRaspberry,
                     label: const Text('Cek Koneksi'),
                   ),
                   const SizedBox(height: 8),
@@ -832,7 +865,7 @@ class _DeteksiRambuPageState extends State<DeteksiRambuPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Langkah 4: Sambung ke Hotspot Raspberry",
+                    "Opsional: Sambung ke Hotspot Raspberry",
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
